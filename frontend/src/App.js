@@ -19,6 +19,7 @@ export const DEPARTMENTS = [
   { key: 'pm', name: 'Packing Material', short: 'PM', color: 'blue', desc: 'Primary & secondary supplies' },
   { key: 'rm', name: 'Raw Material', short: 'RM', color: 'violet', desc: 'Inbound stock management' },
   { key: 'pp', name: 'Primary Packing', short: 'PP', color: 'orange', desc: 'Production lines & machine yield' },
+  { key: 'pop', name: 'Post Production', short: 'POP', color: 'rose', desc: 'Inspection, sorting & final checks' },
 ];
 
 export const MODULES = [
@@ -33,9 +34,10 @@ const DEPT_BG = {
   blue: 'from-blue-500 to-blue-700 shadow-blue-200',
   violet: 'from-violet-500 to-violet-700 shadow-violet-200',
   orange: 'from-orange-500 to-orange-700 shadow-orange-200', 
+  rose: 'from-rose-500 to-rose-700 shadow-rose-200',
 };
 
-const VALID_DEPTS = ['fg', 'pm', 'rm','pp'];
+const VALID_DEPTS = ['fg', 'pm', 'rm','pp','pop'];
 const VALID_MODULES = ['q', 'd', 's', 'h'];
 
 // ─────────────────────────────────────────────
@@ -234,8 +236,8 @@ const ModuleRoute = ({ user }) => {
   if (module === 'd') return <Delivery />;
   if (module === 's') return <SafetyPage />;
   if (module === 'h') return <Health />;
-  return <Navigate to="/" />;
-};
+  return <Navigate to="/" />;      
+}; 
 
 function App() {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('userInfo')));
