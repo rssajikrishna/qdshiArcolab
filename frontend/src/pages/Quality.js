@@ -121,10 +121,10 @@ const QualityPage = () => {
       });
       if (res.ok) {
         const saved = await res.json();
-        setMetrics(prev => prev.map(m => m.letter === 'Q' ? saved : m));
+        setMetrics(prev => prev.map(m => m.letter === 'Q' ? { ...m, ...saved } : m));
         setIsModalOpen(false);
         setDeviationType("");
-        notifySuccess("Metrics updated successfully");
+        notifySuccess(`Shift ${shift} Updated`);
       }
     } catch (e) { notifyError("Sync failed"); }
   };
@@ -137,7 +137,7 @@ const QualityPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ letter: 'Q', shift: shift || '1', dept: dept || 'fg', logs: staffLogs }),
       });
-      if(res.ok) notifySuccess("Staff Logs Updated");
+      if (res.ok) notifySuccess("Staff Logs Updated");
     } catch (e) { notifyError("Staff sync failed"); }
     finally { setTableSyncing(prev => ({ ...prev, staff: false })); }
   };
@@ -145,12 +145,12 @@ const QualityPage = () => {
   const handleUpdateActivity = async () => {
     setTableSyncing(prev => ({ ...prev, activity: true }));
     try {
-       const res = await fetch(`${API_BASE_URL}/activity`, {
+      const res = await fetch(`${API_BASE_URL}/activity`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ letter: 'Q', shift: shift || '1', dept: dept || 'fg', logs: activityLogs }),
       });
-      if(res.ok) notifySuccess("Activity Logs Updated");
+      if (res.ok) notifySuccess("Activity Logs Updated");
     } catch (e) { notifyError("Activity sync failed"); }
     finally { setTableSyncing(prev => ({ ...prev, activity: false })); }
   };
@@ -178,33 +178,33 @@ const QualityPage = () => {
   const removeRow = async (type, index) => {
     const result = await confirmDelete(type === 'staff' ? "staff log entry" : "activity log entry");
     if (result.isConfirmed) {
-        if (type === 'staff') setStaffLogs(prev => prev.filter((_, i) => i !== index));
-        else setActivityLogs(prev => prev.filter((_, i) => i !== index));
-        notifySuccess("Row removed");
+      if (type === 'staff') setStaffLogs(prev => prev.filter((_, i) => i !== index));
+      else setActivityLogs(prev => prev.filter((_, i) => i !== index));
+      notifySuccess("Row removed");
     }
   };
 
   const downloadPDF = async () => {
     const loadingSwal = MySwal.fire({
-        title: 'Generating PDF...',
-        didOpen: () => Swal.showLoading(),
-        allowOutsideClick: false
+      title: 'Generating PDF...',
+      didOpen: () => Swal.showLoading(),
+      allowOutsideClick: false
     });
 
     try {
-        const element = reportRef.current;
-        const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: "#F0F4F8" });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('l', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`Quality_Report_${viewMonthName}_${viewYear}.pdf`);
-        loadingSwal.close();
-        notifySuccess("Report Downloaded");
+      const element = reportRef.current;
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: "#F0F4F8" });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('l', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Quality_Report_${viewMonthName}_${viewYear}.pdf`);
+      loadingSwal.close();
+      notifySuccess("Report Downloaded");
     } catch (e) {
-        loadingSwal.close();
-        notifyError("PDF Generation Failed");
+      loadingSwal.close();
+      notifyError("PDF Generation Failed");
     }
   };
 
@@ -212,24 +212,28 @@ const QualityPage = () => {
     const fetchMetrics = async () => {
       setLoading(true);
       try {
-        const url = `${API_BASE_URL}?shift=${shift || '1'}&dept=${dept || 'fg'}`;
+        // Pass shift and dept as query params
+        const url = `${API_BASE_URL}?shift=${shift}&dept=${dept}`;
         const response = await fetch(url);
         const dbData = await response.json();
+
         if (dbData && Array.isArray(dbData)) {
-          const merged = initialData.map(blueprint => {
-            const live = dbData.find(d => d.letter === blueprint.letter);
-            return live ? { ...blueprint, ...live } : blueprint;
-          });
-          setMetrics(merged);
+          // Find the Quality metric for THIS specific shift (filtered by backend)
           const qLive = dbData.find(d => d.letter === 'Q');
+
+          // Update local state with shift-specific data
+          setMetrics(dbData);
           setStaffLogs(qLive?.staffLogs || []);
           setActivityLogs(qLive?.activityLogs || []);
         }
-      } catch (error) { console.error("Fetch error:", error); } 
-      finally { setLoading(false); }
+      } catch (error) {
+        console.error("Fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchMetrics();
-  }, [shift, dept]);
+  }, [shift, dept]); // Refetch whenever the shift changes in the URL
 
   const daysInViewMonth = useMemo(() => new Date(viewYear, viewDate.getMonth() + 1, 0).getDate(), [viewDate, viewYear]);
 
@@ -282,8 +286,8 @@ const QualityPage = () => {
 
   if (loading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-white gap-4">
-        <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-        <div className="text-emerald-600 font-black uppercase tracking-[0.3em] animate-pulse">Syncing Arcolab Data...</div>
+      <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="text-emerald-600 font-black uppercase tracking-[0.3em] animate-pulse">Syncing Arcolab Data...</div>
     </div>
   );
 
@@ -298,7 +302,7 @@ const QualityPage = () => {
             onClick={() => setIsModalOpen(true)}
             className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-2.5 rounded-full text-[11px] font-black uppercase tracking-wider shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
           >
-            <Edit3 size={14}/> UPDATE {viewMonthName.split(' ')[0]} LOGS
+            <Edit3 size={14} /> UPDATE {viewMonthName.split(' ')[0]} LOGS
           </button>
         )}
       </nav>
@@ -314,9 +318,9 @@ const QualityPage = () => {
         {/* Tracker Section */}
         <div className="col-span-12 lg:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 flex flex-col items-center">
           <div className="flex items-center justify-between w-full mb-8 bg-[#F8FAFC] px-4 py-2 rounded-full border border-slate-100">
-            <button onClick={() => { const d = new Date(viewDate); d.setMonth(d.getMonth()-1); setViewDate(d); }} className="text-emerald-500 hover:scale-110 transition p-1"><ChevronLeft size={24}/></button>
+            <button onClick={() => { const d = new Date(viewDate); d.setMonth(d.getMonth() - 1); setViewDate(d); }} className="text-emerald-500 hover:scale-110 transition p-1"><ChevronLeft size={24} /></button>
             <span className="text-[12px] sm:text-[13px] font-black text-emerald-600 tracking-widest text-center">{viewMonthName} {viewYear}</span>
-            <button onClick={() => { const d = new Date(viewDate); d.setMonth(d.getMonth()+1); setViewDate(d); }} className="text-emerald-500 hover:scale-110 transition p-1"><ChevronRight size={24}/></button>
+            <button onClick={() => { const d = new Date(viewDate); d.setMonth(d.getMonth() + 1); setViewDate(d); }} className="text-emerald-500 hover:scale-110 transition p-1"><ChevronRight size={24} /></button>
           </div>
           <span className="text-2xl font-black text-slate-800 uppercase tracking-tighter">{qData.name}</span>
           <div className="flex-1 flex items-center justify-center min-h-[250px] w-full max-w-[300px] relative">
@@ -354,9 +358,9 @@ const QualityPage = () => {
                       </td>
                       <td className="p-2 font-bold text-slate-500 text-[10px]">{log.deviationType || '--'}</td>
                       <td className="p-2 text-right">
-                         {isSuperAdmin && (
-                            <button onClick={() => handleDeleteLog(log.rawDate)} className="text-red-300 hover:text-red-600 p-1 transition-colors"><Trash2 size={16} /></button>
-                         )}
+                        {isSuperAdmin && (
+                          <button onClick={() => handleDeleteLog(log.rawDate)} className="text-red-300 hover:text-red-600 p-1 transition-colors"><Trash2 size={16} /></button>
+                        )}
                       </td>
                     </tr>
                   )) : (
@@ -431,11 +435,11 @@ const QualityPage = () => {
 
         {/* Bottom Logs */}
         <div className="col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <LogTable 
-            type="staff" 
-            title="Team & Staff Compliance" 
-            icon={<User size={14} className="text-emerald-500" />} 
-            logs={staffLogs} 
+          <LogTable
+            type="staff"
+            title="Team & Staff Compliance"
+            icon={<User size={14} className="text-emerald-500" />}
+            logs={staffLogs}
             isSuperAdmin={isSuperAdmin}
             onAdd={() => addRow('staff')}
             onUpdate={handleUpdateStaff}
@@ -445,11 +449,11 @@ const QualityPage = () => {
             theme="emerald"
           />
 
-          <LogTable 
-            type="activity" 
-            title="Operational Quality Logs" 
-            icon={<Activity size={14} className="text-blue-500" />} 
-            logs={activityLogs} 
+          <LogTable
+            type="activity"
+            title="Operational Quality Logs"
+            icon={<Activity size={14} className="text-blue-500" />}
+            logs={activityLogs}
             isSuperAdmin={isSuperAdmin}
             onAdd={() => addRow('activity')}
             onUpdate={handleUpdateActivity}
@@ -472,18 +476,18 @@ const QualityPage = () => {
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-[400px] p-6 sm:p-8 border border-slate-100">
             <div className="flex justify-between items-center mb-6">
               <h2 className="font-black uppercase tracking-widest text-[10px] flex items-center gap-2 text-slate-800">
-                <Edit3 size={16} className="text-emerald-500"/> LOG RECORD
+                <Edit3 size={16} className="text-emerald-500" /> LOG RECORD
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-300 hover:text-red-500"><X size={20}/></button>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-300 hover:text-red-500"><X size={20} /></button>
             </div>
             <div className="space-y-4">
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase block mb-1 ml-1">Date</label>
-                <input type="date" value={customDate} onChange={(e)=>setCustomDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4 text-sm outline-none focus:ring-2 ring-emerald-500" />
+                <input type="date" value={customDate} onChange={(e) => setCustomDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4 text-sm outline-none focus:ring-2 ring-emerald-500" />
               </div>
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase block mb-1 ml-1">Reason</label>
-                <select value={selectedIssue} onChange={(e)=>setSelectedIssue(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4 text-sm outline-none focus:ring-2 ring-emerald-500">
+                <select value={selectedIssue} onChange={(e) => setSelectedIssue(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4 text-sm outline-none focus:ring-2 ring-emerald-500">
                   <option value="Target Met">✅ Target Met</option>
                   <option value="Machine Breakdown">⚠️ Machine Breakdown</option>
                   <option value="No Power">⚠️ No Power</option>
@@ -494,7 +498,7 @@ const QualityPage = () => {
               {selectedIssue !== "Target Met" && (
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase block mb-1 ml-1">Deviation Type</label>
-                  <select value={deviationType} onChange={(e)=>setDeviationType(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4 text-sm outline-none focus:ring-2 ring-emerald-500">
+                  <select value={deviationType} onChange={(e) => setDeviationType(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4 text-sm outline-none focus:ring-2 ring-emerald-500">
                     <option value="">-- Select Deviation Type --</option>
                     <option value="Human Error">Human Error</option>
                     <option value="Process Error">Process Error</option>
@@ -528,13 +532,13 @@ const LogTable = ({ title, icon, logs, isSuperAdmin, onAdd, onUpdate, onRemove, 
   };
 
   const style = themeStyles[theme] || themeStyles.emerald;
-  
+
   return (
     <div className="bg-white rounded-[1.5rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[350px]">
       <div className={`px-5 py-4 flex items-center justify-between border-b border-slate-50 ${style.bg}`}>
         <div className="flex items-center gap-2">
-            {icon}
-            <h3 className={`font-black text-[10px] ${style.text} tracking-widest uppercase`}>{title}</h3>
+          {icon}
+          <h3 className={`font-black text-[10px] ${style.text} tracking-widest uppercase`}>{title}</h3>
         </div>
         <div className="flex gap-2">
           <button onClick={onAdd} className="bg-white border border-slate-200 px-3 py-1 rounded-lg text-[9px] font-black uppercase hover:bg-slate-50">Add Row</button>
@@ -543,44 +547,44 @@ const LogTable = ({ title, icon, logs, isSuperAdmin, onAdd, onUpdate, onRemove, 
           </button>
         </div>
       </div>
-      
+
       <div className="px-4 py-2 bg-slate-50 flex gap-4 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-          <span className="w-20">Emp ID / Ref</span>
-          <span className="flex-1">Name / Description</span>
-          <span className="flex-1">Action Taken</span>
-          <span className="w-12 text-right">Time</span>
-          {isSuperAdmin && <span className="w-6"></span>}
+        <span className="w-20">Emp ID / Ref</span>
+        <span className="flex-1">Name / Description</span>
+        <span className="flex-1">Action Taken</span>
+        <span className="w-12 text-right">Time</span>
+        {isSuperAdmin && <span className="w-6"></span>}
       </div>
 
       <div className="overflow-y-auto flex-1 p-4 divide-y divide-slate-100 custom-scrollbar">
         {logs.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center opacity-30 italic text-[10px] font-bold py-10">No records found</div>
+          <div className="h-full flex flex-col items-center justify-center opacity-30 italic text-[10px] font-bold py-10">No records found</div>
         ) : logs.map((log, i) => (
           <div key={i} className="py-2.5 flex gap-4 items-center group hover:bg-slate-50/50 rounded-lg transition-colors px-2">
-             <input 
-                className="w-20 text-[10px] font-bold text-slate-500 bg-slate-100/50 p-1.5 rounded border border-transparent focus:border-slate-300 outline-none" 
-                value={log.id} 
-                onChange={(e) => onChange(i, 'id', e.target.value)} 
-             />
-             <input 
-                className="flex-1 text-[11px] font-bold text-slate-700 outline-none border-b border-transparent focus:border-emerald-300 transition-colors bg-transparent" 
-                placeholder="Name/Item" 
-                value={log.name} 
-                onChange={(e) => onChange(i, 'name', e.target.value)} 
-             />
-             <input 
-                className="flex-1 text-[10px] font-medium text-slate-500 outline-none border-b border-transparent focus:border-emerald-300 bg-transparent" 
-                placeholder="Detailed action..." 
-                value={log.action} 
-                onChange={(e) => onChange(i, 'action', e.target.value)} 
-             />
-             <div className="flex items-center gap-1 w-12 text-right">
-                <Clock size={10} className="text-slate-300" />
-                <span className="text-[9px] font-black text-slate-400">{log.time}</span>
-             </div>
-             {isSuperAdmin && (
-                <button onClick={() => onRemove(i)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"><Trash2 size={14} /></button>
-             )}
+            <input
+              className="w-20 text-[10px] font-bold text-slate-500 bg-slate-100/50 p-1.5 rounded border border-transparent focus:border-slate-300 outline-none"
+              value={log.id}
+              onChange={(e) => onChange(i, 'id', e.target.value)}
+            />
+            <input
+              className="flex-1 text-[11px] font-bold text-slate-700 outline-none border-b border-transparent focus:border-emerald-300 transition-colors bg-transparent"
+              placeholder="Name/Item"
+              value={log.name}
+              onChange={(e) => onChange(i, 'name', e.target.value)}
+            />
+            <input
+              className="flex-1 text-[10px] font-medium text-slate-500 outline-none border-b border-transparent focus:border-emerald-300 bg-transparent"
+              placeholder="Detailed action..."
+              value={log.action}
+              onChange={(e) => onChange(i, 'action', e.target.value)}
+            />
+            <div className="flex items-center gap-1 w-12 text-right">
+              <Clock size={10} className="text-slate-300" />
+              <span className="text-[9px] font-black text-slate-400">{log.time}</span>
+            </div>
+            {isSuperAdmin && (
+              <button onClick={() => onRemove(i)} className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"><Trash2 size={14} /></button>
+            )}
           </div>
         ))}
       </div>
@@ -610,7 +614,7 @@ const ChartCard = ({ title, children }) => (
       </div>
       <Maximize2 size={12} className="text-slate-300" />
     </div>
-    <div className="p-5 flex-1">{children}</div> 
+    <div className="p-5 flex-1">{children}</div>
   </div>
 );
 
