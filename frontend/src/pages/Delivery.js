@@ -7,7 +7,74 @@ import { dashboardMetrics as initialData } from '../dashboardData';
 
 const API_BASE = 'http://localhost:5000/api/metrics';
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const DEPT_FULL = { fg: 'Finished Good Warehouse', pm: 'Packing Material Warehouse', rm: 'Raw Material Warehouse' };
+const DEPT_FULL = { fg: 'Finished Good Warehouse', pm: 'Packing Material Warehouse', rm: 'Raw Material Warehouse', qcmad: 'QC & Microbiology & AD Lab', pro: 'Production', pop: 'Post Production', ppp: 'Primary Packing Production', spp: 'Secondary Packing Production', fac: 'Facilities' };
+
+// Department-specific Delivery metric labels per GMP document
+const DEPT_DELIVERY_LABELS = {
+  fg: {
+    planVsActual: 'Plan vs Actual Disposed',
+    archiveTitle: 'Disposal Archives',
+    targetLabel: 'Target Disposed', actualLabel: 'Actual Disposed',
+    delay1Col: 'BPR Receipts', delay1Ph: 'Delayed BPR Receipts (min)',
+    delay2Col: 'Shipments', delay2Ph: 'Delayed Shipments / Logistics (min)',
+  },
+  pm: {
+    planVsActual: 'Plan vs Actual Dispensed',
+    archiveTitle: 'Dispatch Archives',
+    targetLabel: 'Target Dispensed', actualLabel: 'Actual Dispensed',
+    delay1Col: 'PBR/Indent', delay1Ph: 'Delayed PBR / Indent (min)',
+    delay2Col: 'PM QC Approval', delay2Ph: 'Delayed PM QC Approval (min)',
+  },
+  rm: {
+    planVsActual: 'Plan vs Actual Dispensed',
+    archiveTitle: 'Dispatch Archives',
+    targetLabel: 'Target Dispensed', actualLabel: 'Actual Dispensed',
+    delay1Col: 'BMR/Indent', delay1Ph: 'Delayed BMR / Indent (min)',
+    delay2Col: 'RM QC Approval', delay2Ph: 'Delayed RM QC Approval (min)',
+  },
+  qcmad: {
+    planVsActual: 'Plan vs Actual Tasks',
+    archiveTitle: 'Task Archives',
+    targetLabel: 'Tasks Planned', actualLabel: 'Tasks Executed',
+    delay1Col: 'Sample Testing', delay1Ph: 'Delayed Sample Testing (min)',
+    delay2Col: 'Repeated Testing', delay2Ph: 'No. of Invalid / Repeated Testing',
+  },
+  pro: {
+    planVsActual: 'Plan vs Actual Manufactured',
+    archiveTitle: 'Production Archives',
+    targetLabel: 'Target Output', actualLabel: 'Actual Output',
+    delay1Col: 'RM Shortage', delay1Ph: 'Raw Material Shortage Impact (batches)',
+    delay2Col: 'Changeover', delay2Ph: 'Non-Serial Changeover Time (min)',
+  },
+  pop: {
+    planVsActual: 'Plan vs Actual Manufactured',
+    archiveTitle: 'Production Archives',
+    targetLabel: 'Target Output', actualLabel: 'Actual Output',
+    delay1Col: 'RM Shortage', delay1Ph: 'Raw Material Shortage Impact (batches)',
+    delay2Col: 'Changeover', delay2Ph: 'Non-Serial Changeover Time (min)',
+  },
+  ppp: {
+    planVsActual: 'Plan vs Actual Packed',
+    archiveTitle: 'Packing Archives',
+    targetLabel: 'Target Packed', actualLabel: 'Actual Packed',
+    delay1Col: 'RM Shortage', delay1Ph: 'Raw Material Shortage Impact (batches)',
+    delay2Col: 'Changeover', delay2Ph: 'Non-Serial Changeover Time (min)',
+  },
+  spp: {
+    planVsActual: 'Plan vs Actual Packed',
+    archiveTitle: 'Packing Archives',
+    targetLabel: 'Target Packed', actualLabel: 'Actual Packed',
+    delay1Col: 'Label Errors', delay1Ph: 'No. of Labeling / Serialization Errors',
+    delay2Col: 'Pkg Shortage', delay2Ph: 'No. of Carton / Packaging Material Shortage (batches)',
+  },
+  fac: {
+    planVsActual: 'Plan vs Actual Tasks',
+    archiveTitle: 'Task Archives',
+    targetLabel: 'Tasks Planned', actualLabel: 'Tasks Completed',
+    delay1Col: 'Housekeeping', delay1Ph: 'GMP & Non-GMP Housekeeping Compliance (%)',
+    delay2Col: 'Waste Removal', delay2Ph: 'Timeliness of Waste Removal (%)',
+  },
+};
 
 const THEME_STYLES = {
   emerald: { bg: 'bg-emerald-600', text: 'text-emerald-800', light: 'bg-emerald-50/20', border: 'border-emerald-100' },
@@ -21,6 +88,7 @@ const DeliveryPage = () => {
   
   const activeShift = paramShift || user?.shift || '1';
   const activeDept = paramDept || 'fg';
+  const deptLabels = DEPT_DELIVERY_LABELS[activeDept] || DEPT_DELIVERY_LABELS.fg;
 
   // --- State ---
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -248,7 +316,7 @@ const DeliveryPage = () => {
           </button>
           <div className="h-8 w-[1px] bg-slate-200" />
           <div>
-             <h1 className="text-[11px] font-black uppercase tracking-tighter text-slate-800">Delivery Metrics Control</h1>
+             <h1 className="text-[11px] font-black uppercase tracking-tighter text-slate-800">Delivery — {deptLabels.planVsActual}</h1>
              <p className="text-[9px] font-bold text-emerald-500 uppercase">{DEPT_FULL[activeDept]} · Shift {activeShift}</p>
           </div>
         </div>
@@ -290,17 +358,17 @@ const DeliveryPage = () => {
 
         <div className="col-span-12 lg:col-span-6 flex flex-col gap-6">
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden h-[400px] flex flex-col">
-            <SectionHeader icon={<Star size={14} className="text-emerald-500" />} title="Dispatch Archives" />
+            <SectionHeader icon={<Star size={14} className="text-emerald-500" />} title={deptLabels.archiveTitle} />
             <div className="px-8 py-3 bg-slate-50 grid grid-cols-4 text-[9px] font-black text-slate-400 uppercase border-b border-slate-100">
-              <span>Timeline</span><span className="text-center">Target</span><span className="text-center">Actual</span><span className="text-right">Action</span>
+              <span>Timeline</span><span className="text-center">{deptLabels.targetLabel}</span><span className="text-center">{deptLabels.actualLabel}</span><span className="text-right">Action</span>
             </div>
             <InfiniteScrollList data={allYearLogs} type="dispatch" setDeleteConfig={setDeleteConfig} />
           </div>
 
           <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden h-[300px] flex flex-col">
-            <SectionHeader icon={<Clock size={14} className="text-orange-500" />} title="Minor Downtime Metrics" />
+            <SectionHeader icon={<Clock size={14} className="text-orange-500" />} title="Problem-Solving Metrics" />
             <div className="px-8 py-3 bg-slate-50 grid grid-cols-5 text-[9px] font-black text-slate-400 uppercase border-b border-slate-100">
-              <span>Date</span><span className="text-center">M/C</span><span className="text-center">PBR</span><span className="text-center">QC</span><span className="text-right">Action</span>
+              <span>Date</span><span className="text-center">M/C</span><span className="text-center">{deptLabels.delay1Col}</span><span className="text-center">{deptLabels.delay2Col}</span><span className="text-right">Action</span>
             </div>
             <InfiniteScrollList data={allYearLogs} type="minor" setDeleteConfig={setDeleteConfig} />
           </div>
@@ -373,17 +441,18 @@ const DeliveryPage = () => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[130] flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-[400px] p-8 shadow-2xl">
-            <h2 className="font-black text-slate-800 uppercase text-center text-sm mb-8">Production Sync</h2>
+            <h2 className="font-black text-slate-800 uppercase text-center text-sm mb-2">Update Delivery Log</h2>
+            <p className="text-[9px] font-bold text-emerald-500 uppercase text-center mb-8 tracking-widest">{deptLabels.planVsActual}</p>
             <div className="space-y-4">
               <input type="date" value={customDate} onChange={e => setCustomDate(e.target.value)} className="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none" />
               <div className="grid grid-cols-2 gap-4">
-                <input type="number" placeholder="Target" value={plannedCount} onChange={e => setPlannedCount(e.target.value)} className="w-full bg-slate-50 rounded-2xl p-4 font-bold" />
-                <input type="number" placeholder="Actual" value={dispatchedCount} onChange={e => setDispatchedCount(e.target.value)} className="w-full bg-slate-50 rounded-2xl p-4 font-bold" />
+                <input type="number" placeholder={deptLabels.targetLabel} value={plannedCount} onChange={e => setPlannedCount(e.target.value)} className="w-full bg-slate-50 rounded-2xl p-4 font-bold" />
+                <input type="number" placeholder={deptLabels.actualLabel} value={dispatchedCount} onChange={e => setDispatchedCount(e.target.value)} className="w-full bg-slate-50 rounded-2xl p-4 font-bold" />
               </div>
-              <input type="number" placeholder="Breakdowns" value={breakdowns} onChange={e => setBreakdowns(e.target.value)} className="w-full bg-slate-50 rounded-2xl p-4 font-bold" />
+              <input type="number" placeholder="No. of Equipment Breakdown" value={breakdowns} onChange={e => setBreakdowns(e.target.value)} className="w-full bg-slate-50 rounded-2xl p-4 font-bold" />
               <div className="grid grid-cols-2 gap-4">
-                <input type="number" placeholder="PBR" value={pbrDelay} onChange={e => setPbrDelay(e.target.value)} className="w-full bg-slate-50 rounded-2xl p-4 font-bold" />
-                <input type="number" placeholder="QC" value={qcDelay} onChange={e => setQcDelay(e.target.value)} className="w-full bg-slate-50 rounded-2xl p-4 font-bold" />
+                <input type="number" placeholder={deptLabels.delay1Ph} value={pbrDelay} onChange={e => setPbrDelay(e.target.value)} className="w-full bg-slate-50 rounded-2xl p-4 font-bold text-[11px]" />
+                <input type="number" placeholder={deptLabels.delay2Ph} value={qcDelay} onChange={e => setQcDelay(e.target.value)} className="w-full bg-slate-50 rounded-2xl p-4 font-bold text-[11px]" />
               </div>
               <button onClick={handleUpdateStatus} className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black uppercase">Commit to Database</button>
               <button onClick={() => setIsModalOpen(false)} className="w-full text-[10px] font-bold text-slate-400 uppercase">Close</button>

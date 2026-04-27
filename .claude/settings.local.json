@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git -C \"c:/Users/babs2/OneDrive/Desktop/arcolab/qdshiArcolab\" status)"
+      "Bash(git -C \"c:/Users/babs2/OneDrive/Desktop/arcolab/qdshiArcolab\" status)",
+      "Bash(grep -E \"\\\\.\\(js|ts\\)$\")"
     ]
   }
 }
