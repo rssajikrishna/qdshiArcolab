@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, X, Save, ChevronLeft, ChevronRight, Lock, CheckCircle2, ShieldAlert, Clock } from 'lucide-react';
+import { Plus, X, Save, ChevronLeft, ChevronRight, Lock, CheckCircle2, ShieldAlert, Clock, Download } from 'lucide-react';
 import axios from 'axios';
 
 const DEPT_FULL = { fg: 'Finished Good Material Warehouse', pm: 'Packing Material Warehouse', rm: 'Raw Material Warehouse' };
@@ -197,6 +197,10 @@ const Health = () => {
       showNotify('Access Denied: You are not the Health Supervisor', 'error');
       return;
     }
+    if (isSupervisor && !isCurrentDay(day.date)) {
+      showNotify('Supervisors can only update today\'s entry', 'error');
+      return;
+    }
     if (day.status && !isSuperAdmin) {
       showNotify('Security Lock: Only Super Admin can modify entries', 'error');
       return;
@@ -214,6 +218,20 @@ const Health = () => {
       totalStrength: day.totalStrength != null ? String(day.totalStrength) : '',
     });
     setIsModalOpen(true);
+  };
+
+  const downloadCSV = () => {
+    const days = allMonthsData[currentMonthName];
+    const headers = ['Date', 'Month', 'Status', 'Key Points / Observations', 'Attendees', 'Total Strength', 'Attendance %'];
+    const rows = days.filter(d => d.status).map(d => {
+      const pct = d.status === 'meeting' ? calcAttendance(d.attendees, d.totalStrength) : '';
+      return [d.date, currentMonthName, d.status, d.keypoints || '', d.attendees ?? '', d.totalStrength ?? '', pct ?? ''];
+    });
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `Health_${dept}_Shift${shift}_${currentMonthName}_2026.csv`;
+    a.click();
   };
 
   const isMeeting           = formData.status === 'meeting';
@@ -259,10 +277,16 @@ const Health = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-1.5 transition-all hover:shadow-2xl">
-          <button onClick={() => setCurrentMonthIndex(prev => prev === 0 ? 11 : prev - 1)} className="p-2.5 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900 transition-all"><ChevronLeft size={20}/></button>
-          <span className="px-10 font-black uppercase tracking-widest text-xs w-44 text-center">{currentMonthName}</span>
-          <button onClick={() => setCurrentMonthIndex(prev => prev === 11 ? 0 : prev + 1)} className="p-2.5 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900 transition-all"><ChevronRight size={20}/></button>
+        <div className="flex items-center gap-3">
+          <button onClick={downloadCSV}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs shadow-sm transition-all">
+            <Download size={14}/> CSV
+          </button>
+          <div className="flex items-center bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-1.5 transition-all hover:shadow-2xl">
+            <button onClick={() => setCurrentMonthIndex(prev => prev === 0 ? 11 : prev - 1)} className="p-2.5 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900 transition-all"><ChevronLeft size={20}/></button>
+            <span className="px-10 font-black uppercase tracking-widest text-xs w-44 text-center">{currentMonthName}</span>
+            <button onClick={() => setCurrentMonthIndex(prev => prev === 11 ? 0 : prev + 1)} className="p-2.5 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-900 transition-all"><ChevronRight size={20}/></button>
+          </div>
         </div>
       </header>
 

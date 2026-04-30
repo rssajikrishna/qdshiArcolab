@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ChevronLeft, ChevronRight, Star, Maximize2, X, ShieldAlert, AlertTriangle, CheckCircle
+  ChevronLeft, ChevronRight, Star, Maximize2, X, ShieldAlert, AlertTriangle, CheckCircle, Download
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -176,11 +176,24 @@ const SafetyPage = () => {
         <button onClick={() => navigate('/')} className="flex items-center gap-1 text-[#475569] font-bold text-xs uppercase hover:text-orange-600 transition-all">
           <ChevronLeft size={20} /> BACK
         </button>
-        {canUpdate && (
-          <button onClick={() => setIsModalOpen(true)} className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg transition-all active:scale-95">
-            UPDATE {viewMonthName} SAFETY LOGS
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={() => {
+              const headers = ['Date', 'Safety Incidents', 'Near Miss', 'Unsafe Acts', 'People Affected', 'Severity'];
+              const rows = sData.issueLogs.map(l => [l.date || l.rawDate, l.numSafetyIncidents, l.numNearMiss, l.numUnsafeActs, l.peopleAffected, l.severity]);
+              const csv = [headers, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+              const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+              a.download = `Safety_Shift${shift}_${dept}.csv`; a.click();
+            }}
+            className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all">
+            <Download size={13} /> CSV
           </button>
-        )}
+          {canUpdate && (
+            <button onClick={() => setIsModalOpen(true)} className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider shadow-lg transition-all active:scale-95">
+              UPDATE {viewMonthName} SAFETY LOGS
+            </button>
+          )}
+        </div>
       </nav>
 
       <div className="px-4 mb-4">
@@ -390,7 +403,12 @@ const SafetyPage = () => {
             </div>
 
             <div className="space-y-4">
-              <InputField label="Date" type="date" value={customDate} onChange={(e)=>setCustomDate(e.target.value)} />
+              <InputField label="Date" type="date" value={customDate}
+                onChange={(e) => setCustomDate(e.target.value)}
+                max={user?.role === 'supervisor' ? new Date().toISOString().split('T')[0] : undefined}
+                readOnly={user?.role === 'supervisor'}
+                title={user?.role === 'supervisor' ? 'Supervisors can only update today' : ''}
+              />
 
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2">No. of Safety Incidents</label>

@@ -10,9 +10,12 @@ const metricRoutes      = require('./routes/metricRoutes');
 const userRoutes        = require('./routes/userRoutes');
 const healthRoutes      = require('./routes/healthRoutes');
 const ideationRoutes    = require('./routes/IdeationRoutes');
-const ehsRoutes         = require('./routes/ehsRoutes');
-const engineeringRoutes = require('./routes/engineeringRoutes');
-const hrRoutes          = require('./routes/hrRoutes');
+const ehsRoutes          = require('./routes/ehsRoutes');
+const engineeringRoutes  = require('./routes/engineeringRoutes');
+const hrRoutes           = require('./routes/hrRoutes');
+const timeLockRoutes     = require('./routes/timeLockRoutes');
+const loginLogRoutes     = require('./routes/loginLogRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 const app = express();
 
@@ -23,9 +26,12 @@ app.use('/api/metrics',      metricRoutes);
 app.use('/api/users',        userRoutes);
 app.use('/api/health',       healthRoutes);
 app.use('/api/ideation',     ideationRoutes);
-app.use('/api/ehs',          ehsRoutes);
-app.use('/api/engineering',  engineeringRoutes);
-app.use('/api/hr',           hrRoutes);
+app.use('/api/ehs',           ehsRoutes);
+app.use('/api/engineering',   engineeringRoutes);
+app.use('/api/hr',            hrRoutes);
+app.use('/api/timelock',      timeLockRoutes);
+app.use('/api/loginlog',      loginLogRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 
 // ✅ CENTRAL CONFIG (IMPORTANT — SAME AS FRONTEND)

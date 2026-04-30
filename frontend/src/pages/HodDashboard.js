@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Briefcase, UserPlus, X, Save, Key, AlertCircle, CheckCircle2,
-  ChevronRight, Mail, Calendar, Hash, User, Users, ShieldCheck,
+  ChevronRight, Mail, Calendar, Hash, User, Users, ShieldCheck, Bell,
 } from 'lucide-react';
 import axios from 'axios';
-import { DEPARTMENTS } from '../App';
+import { DEPARTMENTS, ALL_DEPARTMENTS } from '../departments';
+
+const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const SHIFTS = ['1', '2', '3'];
 
@@ -47,7 +49,7 @@ const DeptCell = ({ value, onChange }) => {
   const toggle = (key) => setLocalSel(prev => toggleItem(prev, key));
 
   const displayText = localSel.length
-    ? localSel.map(k => DEPARTMENTS.find(d => d.key === k)?.short || k.toUpperCase()).join(', ')
+    ? localSel.map(k => ALL_DEPARTMENTS.find(d => d.key === k)?.short || k.toUpperCase()).join(', ')
     : 'None assigned';
 
   return (
@@ -61,7 +63,7 @@ const DeptCell = ({ value, onChange }) => {
       </button>
       {open && (
         <div className="absolute left-0 top-9 z-30 bg-white border border-slate-200 rounded-xl shadow-2xl p-3 min-w-[240px] max-h-64 overflow-y-auto">
-          {DEPARTMENTS.map(dept => (
+          {ALL_DEPARTMENTS.map(dept => (
             <label
               key={dept.key}
               onClick={() => toggle(dept.key)}
@@ -195,6 +197,33 @@ const HodDashboard = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [notification,   setNotification]   = useState({ show: false, message: '', type: '' });
 
+  // Notifications panel
+  const [notifOpen,  setNotifOpen]  = useState(false);
+  const [notifs,     setNotifs]     = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const hodDept = user?.department || '';
+
+  const fetchNotifications = useCallback(async () => {
+    if (!hodDept) return;
+    try {
+      const res = await axios.get(`${API}/api/notifications?dept=${hodDept}`);
+      const data = res.data || [];
+      setNotifs(data);
+      setUnreadCount(data.filter(n => !n.read).length);
+    } catch {}
+  }, [hodDept]);
+
+  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
+
+  const markAllRead = async () => {
+    try {
+      await axios.patch(`${API}/api/notifications/read?dept=${hodDept}`);
+      setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch {}
+  };
+
   const [newUser, setNewUser] = useState({
     name: '', dob: '', employeeId: '', gmail: '', password: '',
     selectedDepts: [], selectedShifts: [], role: 'supervisor',
@@ -280,9 +309,39 @@ const HodDashboard = () => {
         </div>
       )}
 
-      <header className="mb-10">
-        <h1 className="text-3xl font-black text-emerald-900 uppercase tracking-tighter">Global Monitor</h1>
-        <p className="text-emerald-600 font-bold text-xs uppercase opacity-70 tracking-[0.2em]">HOD Console: {user?.name}</p>
+      <header className="mb-10 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-black text-emerald-900 uppercase tracking-tighter">Global Monitor</h1>
+          <p className="text-emerald-600 font-bold text-xs uppercase opacity-70 tracking-[0.2em]">HOD Console: {user?.name}</p>
+        </div>
+        <div className="relative">
+          <button onClick={() => { setNotifOpen(o => !o); if (!notifOpen) markAllRead(); }}
+            className="relative p-3 bg-white border border-emerald-100 rounded-2xl shadow-sm hover:shadow-md transition-all">
+            <Bell size={20} className="text-emerald-700" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+          {notifOpen && (
+            <div className="absolute right-0 top-14 z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl w-80 max-h-96 overflow-y-auto">
+              <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                <span className="text-xs font-black text-slate-700 uppercase tracking-widest">Notifications</span>
+                <button onClick={() => setNotifOpen(false)} className="text-slate-400 hover:text-slate-700"><X size={16}/></button>
+              </div>
+              {notifs.length === 0 ? (
+                <div className="py-10 text-center text-slate-300 text-xs font-bold uppercase tracking-widest">No notifications</div>
+              ) : notifs.slice(0, 30).map((n, i) => (
+                <div key={i} className={`px-4 py-3 border-b border-slate-50 last:border-0 ${n.read ? 'opacity-60' : 'bg-emerald-50/40'}`}>
+                  <p className="text-[10px] font-black text-emerald-700 uppercase tracking-wide">{n.dept?.toUpperCase()} — Shift {n.shift}</p>
+                  <p className="text-xs text-slate-700 font-semibold mt-0.5">{n.message || `${n.empName} updated ${n.module}`}</p>
+                  <p className="text-[9px] text-slate-400 mt-1">{new Date(n.timestamp).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </header>
 
       {/* Add Member card */}
@@ -436,7 +495,7 @@ const HodDashboard = () => {
                   Department(s) (select all that apply)
                 </label>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {DEPARTMENTS.map(dept => (
+                  {ALL_DEPARTMENTS.map(dept => (
                     <label
                       key={dept.key}
                       onClick={() => setNewUser(u => ({ ...u, selectedDepts: toggleItem(u.selectedDepts, dept.key) }))}

@@ -14,6 +14,8 @@ const entrySchema = new mongoose.Schema({
 const EhsEntrySchema = new mongoose.Schema({
   date:    { type: String, required: true },
   shift:   { type: String, required: true },
+  empId:   { type: String, default: '' },
+  empName: { type: String, default: '' },
   entries: [entrySchema],
 }, { timestamps: true });
 

@@ -187,6 +187,20 @@ const QualityPage = () => {
     }
   };
 
+  const downloadCSV = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const logs = Array.isArray(qData.issueLogs) ? qData.issueLogs : [];
+    const headers = ['Date', 'Reason', 'Deviation Type', 'Timestamp'];
+    const rows = logs
+      .sort((a, b) => new Date(a.rawDate) - new Date(b.rawDate))
+      .map(l => [l.date || l.rawDate, l.reason || '', l.deviationType || '', l.timestamp || '']);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `Quality_Shift${shift}_${dept}_${today}.csv`;
+    a.click();
+  };
+
   const downloadPDF = async () => {
     const loadingSwal = MySwal.fire({
       title: 'Generating PDF...',
@@ -300,14 +314,20 @@ const QualityPage = () => {
         <button onClick={() => navigate('/')} className="flex items-center gap-1 text-[#475569] font-bold text-xs uppercase self-start sm:self-center hover:text-emerald-600 transition-colors">
           <ChevronLeft size={20} /> BACK
         </button>
-        {canUpdate && (
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-2.5 rounded-full text-[11px] font-black uppercase tracking-wider shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
-          >
-            <Edit3 size={14} /> UPDATE {viewMonthName.split(' ')[0]} LOGS
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button onClick={downloadCSV}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-full font-bold text-xs shadow-sm transition-all">
+            <Download size={14}/> CSV
           </button>
-        )}
+          {canUpdate && (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-2.5 rounded-full text-[11px] font-black uppercase tracking-wider shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <Edit3 size={14} /> UPDATE {viewMonthName.split(' ')[0]} LOGS
+            </button>
+          )}
+        </div>
       </nav>
 
       <div className="px-4 sm:px-6 mb-4">
@@ -486,7 +506,11 @@ const QualityPage = () => {
             <div className="space-y-4">
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase block mb-1 ml-1">Date</label>
-                <input type="date" value={customDate} onChange={(e) => setCustomDate(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4 text-sm outline-none focus:ring-2 ring-emerald-500" />
+                <input type="date" value={customDate} onChange={(e) => setCustomDate(e.target.value)}
+                  readOnly={isSupervisor} disabled={isSupervisor}
+                  max={isSupervisor ? new Date().toISOString().split('T')[0] : undefined}
+                  title={isSupervisor ? 'Supervisors can only edit today' : ''}
+                  className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-3 sm:p-4 text-sm outline-none focus:ring-2 ring-emerald-500 ${isSupervisor ? 'opacity-60 cursor-not-allowed' : ''}`} />
               </div>
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase block mb-1 ml-1">Reason</label>

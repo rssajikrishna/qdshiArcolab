@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useParams as useRParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Star, Activity, Clock, Calendar, TrendingUp, Trash2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, Activity, Clock, Calendar, TrendingUp, Trash2, AlertCircle, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, ResponsiveContainer, Cell, AreaChart, Area, CartesianGrid, YAxis, Legend, Tooltip } from 'recharts';
 import CircularTracker from '../components/CircularTracker';
 import { dashboardMetrics as initialData } from '../dashboardData';
@@ -339,9 +339,22 @@ const DeliveryPage = () => {
              <p className="text-[9px] font-bold text-emerald-500 uppercase">{DEPT_FULL[activeDept]} · Shift {activeShift}</p>
           </div>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-emerald-200 transition-all active:scale-95">
-          Update Metrics
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              const headers = ['Date', 'Planned', 'Dispatched', 'Breakdowns', 'Delay 1', 'Delay 2'];
+              const rows = dData.issueLogs.map(l => [l.date || l.rawDate, l.planned, l.dispatched, l.breakdowns, l.pbrDelay, l.qcDelay]);
+              const csv = [headers, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+              const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+              a.download = `Delivery_Shift${activeShift}_${activeDept}.csv`; a.click();
+            }}
+            className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all">
+            <Download size={13} /> CSV
+          </button>
+          <button onClick={() => setIsModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-emerald-200 transition-all active:scale-95">
+            Update Metrics
+          </button>
+        </div>
       </nav>
 
       <main className="flex-1 grid grid-cols-12 gap-6 p-6 max-w-[1600px] mx-auto w-full">
@@ -463,7 +476,12 @@ const DeliveryPage = () => {
             <h2 className="font-black text-slate-800 uppercase text-center text-sm mb-2">Update Delivery Log</h2>
             <p className="text-[9px] font-bold text-emerald-500 uppercase text-center mb-6 tracking-widest">{DEPT_FULL[activeDept]} · Shift {activeShift}</p>
             <div className="space-y-3">
-              <input type="date" value={customDate} onChange={e => setCustomDate(e.target.value)} className="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none" />
+              <input type="date" value={customDate}
+                onChange={e => setCustomDate(e.target.value)}
+                max={user?.role === 'supervisor' ? new Date().toISOString().split('T')[0] : undefined}
+                readOnly={user?.role === 'supervisor'}
+                title={user?.role === 'supervisor' ? 'Supervisors can only update today' : ''}
+                className="w-full bg-slate-50 rounded-2xl p-4 font-bold outline-none" />
 
               {/* Performance Metrics */}
               <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest pt-1 border-t border-slate-100">Performance Metrics</p>
